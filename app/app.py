@@ -20,13 +20,13 @@ async def get_details(url: str) -> dict:
     loop = asyncio.get_event_loop()
     details = loop.run_until_complete(main('file.mp3'))
     os.remove("file.mp3")
-    try:
-        return {
-                'title': details['track']['title'],
-                'artist': details['track']['subtitle'],
-                'coverart': details['track']['images']['coverart']
-                }
-    except KeyError:
-        return {
+    if not details['matches']:
+       return {
                 'error': 'Song not found.'
                 }
+    return {
+            'title': details['track']['title'],
+            'artist': details['track']['subtitle'],
+            'coverart': details['track']['images']['coverart']
+            }
+        
