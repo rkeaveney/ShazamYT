@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import pytube as pt
 import nest_asyncio
+import os
 import asyncio
 from shazamio import Shazam
 nest_asyncio.apply()
@@ -11,13 +12,14 @@ async def main(filename):
   out = await shazam.recognize_song(filename)
   return out
 
-@app.get("/shazam")
+@app.get("/")
 async def get_details(url: str) -> dict:
     yt = pt.YouTube(url)
     t = yt.streams.filter(only_audio=True)
     t[0].download(filename="file.mp3")
     loop = asyncio.get_event_loop()
     details = loop.run_until_complete(main('file.mp3'))
+    os.remove("file.mp3")
     return {
             'title': details['track']['title'],
             'artist': details['track']['subtitle']
