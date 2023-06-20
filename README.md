@@ -1,2 +1,2 @@
-# yt-short-shazam
- Takes link to YouTube short as input. Outputs links to song on Spotify / Apple Music.
+# ShazamYT
+Web app which takes link to YouTube video or short as input. Outputs song details & links to song on Spotify / Apple Music.
