@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import * as fs from "fs";
 import { getVideoMP3Base64 } from "yt-get";
 import ytdl from "ytdl-core";
+import axios from "axios";
 
 const app = express();
 const port = 8000;
@@ -18,26 +19,43 @@ app.get("/", (req,res) => {
     res.render(__dirname + "/public/index.ejs");
 });
 
-app.post("/detect", (req,res) => {
-    let videoURL = req.body.url;
-    let videoID = ytdl.getURLVideoID(videoURL);
+app.post("/detect", async (req,res) => {
+    try {
+        let videoURL = req.body.url;
+        let videoID = ytdl.getURLVideoID(videoURL);
 
-    getVideoMP3Base64(videoURL)
-        .then((result) => {
-            const base64 = result.base64;
-            const title = result.title;
-            console.log("Base64-encoded MP3:", base64);
-            console.log("Video Title:", title);
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
+        const mp3_result = await getVideoMP3Base64(videoURL);
+        const data_b64 = mp3_result.base64;
+        const videoTitle = mp3_result.title;
 
-    res.render(__dirname + "/public/result.ejs", 
-        { 
-            "url": videoURL, 
-            "id": videoID,
-        });
+        console.log(data_b64);
+        console.log(videoTitle);
+
+        const options = {
+            method: 'POST',
+            url: 'https://shazam.p.rapidapi.com/songs/v2/detect',
+            params: {
+                timezone: 'Europe/Dublin',
+                locale: 'en-IE'
+            },
+            headers: {
+                'content-type': 'text/plain',
+                'X-RapidAPI-Key': 'b3ce16ef19msh19862eb5f29d401p119962jsn5899845358a6',
+                'X-RapidAPI-Host': 'shazam.p.rapidapi.com'
+            },
+            data: data_b64,
+        };
+
+        const response = await axios.request(options);
+        console.log(response);
+        console.log(response.data);
+
+        res.status(200).send("Success!");
+    }
+    catch (error) {
+        console.error("Failed to complete request. Error:", error);
+        res.status(500).send("Failed to complete request.");
+    }
 });
 
 app.listen(port, () => {
