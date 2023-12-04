@@ -11,14 +11,14 @@ app = FastAPI()
 async def get_shazam_details(video_url: str) -> dict:
     yt = pt.YouTube(video_url, use_oauth=False)
     audio_stream = yt.streams.filter(only_audio=True)[0]
-    audio_stream.download(filename="song.mp3")
+    audio_stream.download(filename="audio.mp3")
 
     shazam = Shazam()
-    details = await shazam.recognize_song('song.mp3')
+    details = await shazam.recognize_song('audio.mp3')
 
-    response = requests.get(details['track']['images']['coverart'])
+    coverart = requests.get(details['track']['images']['coverart'])
     with open("coverart.jpg", "wb") as f:
-        f.write(response.content)
+        f.write(coverart.content)
 
     result = {
         "title": details['track']['title'],
@@ -26,7 +26,7 @@ async def get_shazam_details(video_url: str) -> dict:
         "coverart_path": "coverart.jpg"
     }
 
-    os.remove("song.mp3")
+    os.remove("audio.mp3")
     return result
 
 @app.get("/")
