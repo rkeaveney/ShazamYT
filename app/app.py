@@ -4,6 +4,7 @@ import pytube as pt
 from shazamio import Shazam
 import requests
 import os
+from urllib.parse import urlparse, parse_qs
 
 app = FastAPI()
 
@@ -30,12 +31,26 @@ async def get_shazam_details(video_url: str) -> dict:
 
 @app.get("/")
 async def home():
-    id = input('Enter video ID: ')
-    return RedirectResponse(id=f"/detect?url={id}")
+    url = input('Enter video URL: ')
+    video_id = ""
+    try:
+        parsed_url = urlparse(url)
+        video_id = parse_qs(parsed_url.query)['v'][0]
+    except KeyError:
+        if "/embed/" in url:
+            video_id = url.split("/embed/")[1]
+        elif "/shorts/" in url:
+            video_id = url.split("/shorts/")[1]
+        elif "youtu.be/" in url:
+            video_id = url.split("youtu.be/")[1]
+        else:
+            print("URL not valid.")
+    
+    return RedirectResponse(f"/detect?id={video_id}")
 
 @app.get("/detect")
 async def detect(id: str):
-    url = f'https://www.youtube.com/watch?v={id}'
+    url = f'https://youtu.be/{id}'
     shazam_details = await get_shazam_details(url)
     return shazam_details
 
