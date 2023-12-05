@@ -1,5 +1,7 @@
-from fastapi import FastAPI, Form
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 import pytube as pt
 from shazamio import Shazam
 import requests
@@ -7,6 +9,8 @@ import os
 from urllib.parse import urlparse, parse_qs
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 async def get_shazam_details(video_url: str) -> dict:
     yt = pt.YouTube(video_url, use_oauth=False)
@@ -17,42 +21,50 @@ async def get_shazam_details(video_url: str) -> dict:
     details = await shazam.recognize_song('audio.mp3')
 
     coverart = requests.get(details['track']['images']['coverart'])
-    with open("coverart.jpg", "wb") as f:
+    with open("static/media/coverart.jpg", "wb") as f:
         f.write(coverart.content)
 
     result = {
         "title": details['track']['title'],
         "subtitle": details['track']['subtitle'],
-        "coverart_path": "coverart.jpg"
+        "coverart": "static/media/coverart.jpg",
     }
 
     os.remove("audio.mp3")
     return result
 
 @app.get("/")
-async def home():
-    url = input('Enter video URL: ')
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/detect", response_class=HTMLResponse)
+async def detect(request: Request, url: str = Form(...)):
     video_id = ""
     try:
         parsed_url = urlparse(url)
-        video_id = parse_qs(parsed_url.query)['v'][0]
-    except KeyError:
-        if "/embed/" in url:
+        if 'v' in parse_qs(parsed_url.query):
+            video_id = parse_qs(parsed_url.query)['v'][0]
+        elif "/embed/" in url:
             video_id = url.split("/embed/")[1]
         elif "/shorts/" in url:
             video_id = url.split("/shorts/")[1]
         elif "youtu.be/" in url:
             video_id = url.split("youtu.be/")[1]
         else:
-            print("URL not valid.")
-    
-    return RedirectResponse(f"/detect?id={video_id}")
+            return {"error": "URL not valid."}
+    except Exception as e:
+        return {"error": str(e)}
 
-@app.get("/detect")
-async def detect(id: str):
-    url = f'https://youtu.be/{id}'
-    shazam_details = await get_shazam_details(url)
-    return shazam_details
+    details = await get_shazam_details(f'https://youtu.be/{video_id}')
+
+    print(details["coverart"])
+    
+    return templates.TemplateResponse("result.html", 
+                                      {"request": request, 
+                                       "title": details.get("title", ""), 
+                                       "subtitle": details.get("subtitle", ""), 
+                                       "coverart": details["coverart"]})
+
 
 if __name__ == "__main__":
     import uvicorn

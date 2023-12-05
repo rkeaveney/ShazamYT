@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shazam Result</title>
+</head>
+<body>
+    <h1>Shazam Detection Result</h1>
+    {% if title %}
+        <h2>Title: {{ title }}</h2>
+        <h3>Artist: {{ subtitle }}</h3>
+        <img src="/{{ coverart }}" alt="Cover Art">
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
+    <a href="/">Try another URL</a>
+</body>
+</html>
