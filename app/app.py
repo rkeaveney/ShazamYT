@@ -12,6 +12,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
 async def get_shazam_details(video_url: str) -> dict:
     yt = pt.YouTube(video_url, use_oauth=False)
     audio_stream = yt.streams.filter(only_audio=True)[0]
@@ -37,8 +38,8 @@ async def get_shazam_details(video_url: str) -> dict:
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.post("/detect", response_class=HTMLResponse)
-async def detect(request: Request, url: str = Form(...)):
+@app.post("/process_url")
+async def process_url(url: str = Form(...)):
     video_id = ""
     try:
         parsed_url = urlparse(url)
@@ -55,7 +56,11 @@ async def detect(request: Request, url: str = Form(...)):
     except Exception as e:
         return {"error": str(e)}
 
-    details = await get_shazam_details(f'https://youtu.be/{video_id}')
+    return RedirectResponse(url=f"/detect?id={video_id}", status_code=303)
+
+@app.get("/detect", response_class=HTMLResponse)
+async def detect(request: Request, id: str):
+    details = await get_shazam_details(f'https://youtu.be/{id}')
 
     print(details["coverart"])
     
